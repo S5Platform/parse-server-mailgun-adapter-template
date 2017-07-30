@@ -25,6 +25,7 @@
   "homepage": "https://github.com/bcomeau/parse-server-mailgun-adapter-template#readme",
   "dependencies": {
     "mailcomposer": "^4.0.0",
-    "mailgun-js": "^0.7.15"
+    "mailgun-js": "^0.7.15",
+    "moment": "^2.18.1"
   }
 }

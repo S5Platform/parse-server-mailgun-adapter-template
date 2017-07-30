@@ -1,11 +1,18 @@
 
 var Mailgun = require('mailgun-js');
 var mailcomposer = require('mailcomposer');
+var path = require('path');
+var fs = require('fs');
+
+var defaultBodyHTML;
 
 var SimpleMailgunAdapter = mailgunOptions => {
   if (!mailgunOptions || !mailgunOptions.apiKey || !mailgunOptions.domain || !mailgunOptions.fromAddress) {
     throw 'SimpleMailgunAdapter requires an API Key, domain, and fromAddress.';
   }
+
+  var _messages;
+  var _customFillVariables;
 
   mailgunOptions.verificationSubject =
     mailgunOptions.verificationSubject ||
@@ -23,6 +30,14 @@ var SimpleMailgunAdapter = mailgunOptions => {
     'to reset it:\n%link%';
 
 
+  if ( mailgunOptions.messagesFile ){
+    _messages = require( path.join(process.cwd() , mailgunOptions.messagesFile ) );
+  }
+
+  if ( mailgunOptions.fillVariables ){
+    _customFillVariables = require( path.join(process.cwd() , mailgunOptions.fillVariables ) );
+  }
+
   var mailgun = Mailgun(mailgunOptions);
 
   function escapeRegExp(str) {
@@ -34,12 +49,17 @@ var SimpleMailgunAdapter = mailgunOptions => {
   }
 
   function fillVariables(text, options) {
-    text = replaceAll(text, "%username%", options.user.get("username"));
+    text = replaceAll(text, "%username%", options.user.get("username") || options.user.get("firstName") );
     text = replaceAll(text, "%name%", options.user.get("name"));
     text = replaceAll(text, "%firstName%", options.user.get("firstName"));
     text = replaceAll(text, "%email%", options.user.get("email"));
     text = replaceAll(text, "%appname%", options.appName);
     text = replaceAll(text, "%link%", options.link);
+    text = replaceAll(text, "%subject%", options.subject);
+    text = replaceAll(text, "%body%", options.body);
+    text = replaceAll(text, "%body1%", options.body1);
+    text = replaceAll(text, "%body2%", options.body2);
+    text = replaceAll(text, "%button%", options.button);
     return text;
   }
 
@@ -55,6 +75,8 @@ var SimpleMailgunAdapter = mailgunOptions => {
       if( authData && ( authData.facebook && authData.facebook.id ) ){
         return;
       }
+
+      getEmailMessages( "Verification", options );
 
       var mail = mailcomposer({
         from: {
@@ -110,6 +132,9 @@ var SimpleMailgunAdapter = mailgunOptions => {
 
   var sendPasswordResetEmail = options => {
     if(mailgunOptions.passwordResetBodyHTML){
+
+      getEmailMessages( "PasswordReset", options );
+
       var mail = mailcomposer({
         from: {
           name: mailgunOptions.displayName ?
@@ -121,7 +146,8 @@ var SimpleMailgunAdapter = mailgunOptions => {
         subject: fillVariables(mailgunOptions.passwordResetSubject, options),
         text: fillVariables(mailgunOptions.passwordResetBody, options),
         html: fillVariables(mailgunOptions.passwordResetBodyHTML, options)
-      });
+      })
+
       return new Promise((resolve, reject) => {
         mail.build((mailBuildError, message) => {
           if(mailBuildError){
@@ -131,6 +157,7 @@ var SimpleMailgunAdapter = mailgunOptions => {
             to: getRecipient(options.user),
             message: message.toString('ascii')
           };
+
           mailgun.messages().sendMime(dataToSend, (err, body) => {
             if (err) {
               return reject(err);
@@ -163,18 +190,27 @@ var SimpleMailgunAdapter = mailgunOptions => {
   }
 
   var sendMail = mail => {
-    if(mail.html){
+
+    getEmailMessages( mail.templateName, mail );
+
+    if( !mail.html && mailgunOptions.defaultBodyHTML ){
+      defaultBodyHTML = fs.readFileSync( path.join(process.cwd() , mailgunOptions.defaultBodyHTML.replace('file:', '') ),'utf8' );
+    }
+
+    var html = mail.html?mail.html:defaultBodyHTML;
+
+    if(html){
       var mailC = mailcomposer({
         from: {
           name: mailgunOptions.displayName ?
             mailgunOptions.displayName :
-            options.appName,
+            mail.appName,
           address: mailgunOptions.fromAddress
         },
         to: mail.to,
         subject: mail.subject,
         text: mail.text,
-        html: mail.html
+        html: fillVariables( html, mail)
       });
       return new Promise((resolve, reject) => {
         mailC.build((mailBuildError, message) => {
@@ -185,6 +221,7 @@ var SimpleMailgunAdapter = mailgunOptions => {
             to: mail.to,
             message: message.toString('ascii')
           };
+
           mailgun.messages().sendMime(dataToSend, (err, body) => {
             if (err) {
               return reject(err);
@@ -198,7 +235,7 @@ var SimpleMailgunAdapter = mailgunOptions => {
         from: {
           name: mailgunOptions.displayName ?
             mailgunOptions.displayName :
-            options.appName,
+            mail.appName,
           address: mailgunOptions.fromAddress
         },
         to: mail.to,
@@ -215,6 +252,41 @@ var SimpleMailgunAdapter = mailgunOptions => {
       });
     }
   }
+
+  var getEmailMessages = function( templateName, options ){
+    var currentLocale = options.locale || 'en';
+
+    var langMessage = _messages[currentLocale] || _messages['en'];
+
+    if( langMessage ){
+      if( langMessage["Email"][templateName] ){
+        var emailMessages = _messages[currentLocale]["Email"][templateName];
+        if( emailMessages ){
+          if( emailMessages.Body ){
+            options.body = addVariables( emailMessages.Body, options );
+          }
+          if( emailMessages.Body1 ){
+            options.body1 = addVariables( emailMessages.Body1, options );
+          }
+          if( emailMessages.Body2 ){
+            options.body2 = addVariables( emailMessages.Body2, options );
+          }
+          if( emailMessages.Button ){
+            options.button = addVariables( emailMessages.Button, options);
+          }
+        }
+      }
+    }
+  };
+
+  var addVariables = function( message, options ){
+
+    if( _customFillVariables ){
+      message = _customFillVariables.execute(message, options);
+    }
+
+    return message;
+  };
 
   return Object.freeze({
     sendVerificationEmail: sendVerificationEmail,

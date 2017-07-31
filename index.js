@@ -274,6 +274,9 @@ var SimpleMailgunAdapter = mailgunOptions => {
           if( emailMessages.Button ){
             options.button = addVariables( emailMessages.Button, options);
           }
+          if( emailMessages.Subject && ! options.subject ){
+            options.subject = addVariables( emailMessages.Subject, options);
+          }
         }
       }
     }

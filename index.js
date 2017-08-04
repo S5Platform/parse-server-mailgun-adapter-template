@@ -57,8 +57,8 @@ var SimpleMailgunAdapter = mailgunOptions => {
     text = replaceAll(text, "%link%", options.link);
     text = replaceAll(text, "%subject%", options.subject);
     text = replaceAll(text, "%body%", options.body);
-    text = replaceAll(text, "%body1%", options.body1);
-    text = replaceAll(text, "%body2%", options.body2);
+    text = replaceAll(text, "%bodyTop%", options.bodyTop);
+    text = replaceAll(text, "%bodyBottom%", options.bodyBottom);
     text = replaceAll(text, "%button%", options.button);
     return text;
   }
@@ -76,7 +76,7 @@ var SimpleMailgunAdapter = mailgunOptions => {
         return;
       }
 
-      getEmailMessages( "Verification", options );
+      options = getEmailMessages( "Verification", options );
 
       var mail = mailcomposer({
         from: {
@@ -133,7 +133,7 @@ var SimpleMailgunAdapter = mailgunOptions => {
   var sendPasswordResetEmail = options => {
     if(mailgunOptions.passwordResetBodyHTML){
 
-      getEmailMessages( "PasswordReset", options );
+      options = getEmailMessages( "PasswordReset", options );
 
       var mail = mailcomposer({
         from: {
@@ -189,27 +189,27 @@ var SimpleMailgunAdapter = mailgunOptions => {
     }
   }
 
-  var sendMail = mail => {
+  var sendMail = options => {
 
-    getEmailMessages( mail.templateName, mail );
+    options = getEmailMessages( options.templateName, options );
 
-    if( !mail.html && mailgunOptions.defaultBodyHTML ){
+    if( !options.html && mailgunOptions.defaultBodyHTML ){
       defaultBodyHTML = fs.readFileSync( path.join(process.cwd() , mailgunOptions.defaultBodyHTML.replace('file:', '') ),'utf8' );
     }
 
-    var html = mail.html?mail.html:defaultBodyHTML;
+    var html = options.html?options.html:defaultBodyHTML;
 
     if(html){
       var mailC = mailcomposer({
         from: {
           name: mailgunOptions.displayName ?
             mailgunOptions.displayName :
-            mail.appName,
+            options.appName,
           address: mailgunOptions.fromAddress
         },
-        to: mail.to,
-        subject: mail.subject,
-        text: mail.text,
+        to: options.to,
+        subject: options.subject,
+        text: options.text,
         html: fillVariables( html, mail)
       });
       return new Promise((resolve, reject) => {
@@ -218,7 +218,7 @@ var SimpleMailgunAdapter = mailgunOptions => {
             return reject(mailBuildError);
           }
           var dataToSend = {
-            to: mail.to,
+            to: options.to,
             message: message.toString('ascii')
           };
 
@@ -235,12 +235,12 @@ var SimpleMailgunAdapter = mailgunOptions => {
         from: {
           name: mailgunOptions.displayName ?
             mailgunOptions.displayName :
-            mail.appName,
+            options.appName,
           address: mailgunOptions.fromAddress
         },
-        to: mail.to,
-        subject: mail.subject,
-        text: mail.text
+        to: options.to,
+        subject: options.subject,
+        text: options.text
       }
       return new Promise((resolve, reject) => {
         mailgun.messages().send(data, (err, body) => {
@@ -280,6 +280,8 @@ var SimpleMailgunAdapter = mailgunOptions => {
         }
       }
     }
+
+    return options;
   };
 
   var addVariables = function( message, options ){

@@ -56,8 +56,8 @@ var SimpleMailgunAdapter = mailgunOptions => {
     text = replaceAll(text, "%appname%", options.appName);
     text = replaceAll(text, "%link%", options.link);
     text = replaceAll(text, "%subject%", options.subject);
-    text = replaceAll(text, "%body%", options.body);
     text = replaceAll(text, "%bodyTop%", options.bodyTop);
+    text = replaceAll(text, "%body%", options.body);
     text = replaceAll(text, "%bodyBottom%", options.bodyBottom);
     text = replaceAll(text, "%button%", options.button);
     return text;
@@ -265,11 +265,11 @@ var SimpleMailgunAdapter = mailgunOptions => {
           if( emailMessages.Body ){
             options.body = addVariables( emailMessages.Body, options );
           }
-          if( emailMessages.Body1 ){
-            options.body1 = addVariables( emailMessages.Body1, options );
+          if( emailMessages.BodyTop ){
+            options.bodyTop = addVariables( emailMessages.BodyTop, options );
           }
-          if( emailMessages.Body2 ){
-            options.body2 = addVariables( emailMessages.Body2, options );
+          if( emailMessages.BodyBottom ){
+            options.bodyBottom = addVariables( emailMessages.BodyBottom, options );
           }
           if( emailMessages.Button ){
             options.button = addVariables( emailMessages.Button, options);

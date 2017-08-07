@@ -210,7 +210,7 @@ var SimpleMailgunAdapter = mailgunOptions => {
         to: options.to,
         subject: options.subject,
         text: options.text,
-        html: fillVariables( html, mail)
+        html: fillVariables( html, options)
       });
       return new Promise((resolve, reject) => {
         mailC.build((mailBuildError, message) => {

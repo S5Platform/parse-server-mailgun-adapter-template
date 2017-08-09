@@ -56,9 +56,9 @@ var SimpleMailgunAdapter = mailgunOptions => {
     text = replaceAll(text, "%appname%", options.appName);
     text = replaceAll(text, "%link%", options.link);
     text = replaceAll(text, "%subject%", options.subject);
-    text = replaceAll(text, "%bodyTop%", options.bodyTop);
-    text = replaceAll(text, "%body%", options.body);
-    text = replaceAll(text, "%bodyBottom%", options.bodyBottom);
+    text = replaceAll(text, "%bodyTop%", options.bodyTop || '' );
+    text = replaceAll(text, "%body%", options.body || '');
+    text = replaceAll(text, "%bodyBottom%", options.bodyBottom ||'' );
     text = replaceAll(text, "%button%", options.button);
     return text;
   }
@@ -253,38 +253,49 @@ var SimpleMailgunAdapter = mailgunOptions => {
     }
   }
 
+  var loadMessages = function( type, templateName, locale ){
+
+    if( !locale ) locale = 'en';
+
+    var langMessage = _messages[locale];
+    var resultMessages;
+
+    if( langMessage ){
+      if( langMessage[type] && langMessage[type][templateName] ){
+        resultMessages = langMessage[type][templateName];
+      }
+    }
+
+    return resultMessages;
+  };
+
   var getEmailMessages = function( templateName, options ){
     var currentLocale = options.locale || 'en';
 
-    var langMessage = _messages[currentLocale] || _messages['en'];
+    var emailMessages = loadMessages("Email", templateName, currentLocale);
 
-    if( langMessage ){
-      if( langMessage["Email"][templateName] ){
-        var emailMessages = _messages[currentLocale]["Email"][templateName];
-        if( emailMessages ){
-          if( emailMessages.Body ){
-            options.body = addVariables( emailMessages.Body, options );
-          }
-          if( emailMessages.BodyTop ){
-            options.bodyTop = addVariables( emailMessages.BodyTop, options );
-          }
-          if( emailMessages.BodyBottom ){
-            options.bodyBottom = addVariables( emailMessages.BodyBottom, options );
-          }
-          if( emailMessages.Button ){
-            options.button = addVariables( emailMessages.Button, options);
-          }
-          if( emailMessages.Subject && ! options.subject ){
-            options.subject = addVariables( emailMessages.Subject, options);
-          }
-        }
+    if( emailMessages ){
+      if( emailMessages.Body ){
+        options.body = convertVariables( emailMessages.Body, options );
+      }
+      if( emailMessages.BodyTop ){
+        options.bodyTop = convertVariables( emailMessages.BodyTop, options );
+      }
+      if( emailMessages.BodyBottom ){
+        options.bodyBottom = convertVariables( emailMessages.BodyBottom, options );
+      }
+      if( emailMessages.Button ){
+        options.button = convertVariables( emailMessages.Button, options);
+      }
+      if( emailMessages.Subject && ! options.subject ){
+        options.subject = convertVariables( emailMessages.Subject, options);
       }
     }
 
     return options;
   };
 
-  var addVariables = function( message, options ){
+  var convertVariables = function( message, options ){
 
     if( _customFillVariables ){
       message = _customFillVariables.execute(message, options);
@@ -296,7 +307,8 @@ var SimpleMailgunAdapter = mailgunOptions => {
   return Object.freeze({
     sendVerificationEmail: sendVerificationEmail,
     sendPasswordResetEmail: sendPasswordResetEmail,
-    sendMail: sendMail
+    sendMail: sendMail,
+    loadMessages: loadMessages
   });
 }
 

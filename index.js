@@ -76,6 +76,10 @@ var SimpleMailgunAdapter = mailgunOptions => {
         return;
       }
 
+      if( options.user.get("locale") ){
+        options.locale = options.user.get("locale");
+      }
+
       options = getEmailMessages( "Verification", options );
 
       var mail = mailcomposer({
@@ -86,7 +90,7 @@ var SimpleMailgunAdapter = mailgunOptions => {
           address: mailgunOptions.fromAddress
         },
         to: getRecipient(options.user),
-        subject: fillVariables(mailgunOptions.verificationSubject, options),
+        subject: options.subject || fillVariables( options.subject || mailgunOptions.verificationSubject, options),
         text: fillVariables(mailgunOptions.verificationBody, options),
         html: fillVariables(mailgunOptions.verificationBodyHTML, options)
       });
@@ -131,7 +135,12 @@ var SimpleMailgunAdapter = mailgunOptions => {
   }
 
   var sendPasswordResetEmail = options => {
+
     if(mailgunOptions.passwordResetBodyHTML){
+
+      if( options.user.get("locale") ){
+        options.locale = options.user.get("locale");
+      }
 
       options = getEmailMessages( "PasswordReset", options );
 
@@ -143,7 +152,7 @@ var SimpleMailgunAdapter = mailgunOptions => {
           address: mailgunOptions.fromAddress
         },
         to: getRecipient(options.user),
-        subject: fillVariables(mailgunOptions.passwordResetSubject, options),
+        subject: fillVariables( options.subject || mailgunOptions.passwordResetSubject, options),
         text: fillVariables(mailgunOptions.passwordResetBody, options),
         html: fillVariables(mailgunOptions.passwordResetBodyHTML, options)
       })
